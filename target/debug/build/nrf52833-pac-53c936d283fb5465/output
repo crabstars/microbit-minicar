@@ -1,3 +1,0 @@
-cargo:rustc-link-search=/home/kami/Documents/embed/car/rust/target/debug/build/nrf52833-pac-53c936d283fb5465/out
-cargo:rerun-if-changed=device.x
-cargo:rerun-if-changed=build.rs

@@ -1,0 +1,3 @@
+cargo:rustc-link-search=/home/kami/Documents/embed/tutorial/microbit/target/thumbv7em-none-eabihf/debug/build/nrf52833-pac-9fc36c2b21131021/out
+cargo:rerun-if-changed=device.x
+cargo:rerun-if-changed=build.rs

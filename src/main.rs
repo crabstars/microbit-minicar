@@ -1,18 +1,82 @@
 #![no_std]
 #![no_main]
 
+use core::hint::spin_loop;
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
+use embedded_hal::digital::{InputPin, OutputPin};
 use microbit::{
     board::Board,
     hal::{
         Timer,
+        gpio::Level,
         twim::{self, Twim},
     },
 };
 use panic_halt as _;
 
 const I2C_ADDR: u8 = 0x30;
+const ULTRA_MAX_PULSE_US: u32 = 35_000;
+
+fn elapsed_us<U>(clock: &Timer<microbit::pac::TIMER1, U>, start: u32) -> u32 {
+    clock.read().wrapping_sub(start)
+}
+
+fn pulse_in_high<U>(
+    clock: &Timer<microbit::pac::TIMER1, U>,
+    echo: &mut impl InputPin,
+    timeout_us: u32,
+) -> u32 {
+    let wait_start = clock.read();
+    while echo.is_low().ok().unwrap_or(false) {
+        if elapsed_us(clock, wait_start) >= timeout_us {
+            return 0;
+        }
+        spin_loop();
+    }
+
+    let pulse_start = clock.read();
+    while echo.is_high().ok().unwrap_or(false) {
+        if elapsed_us(clock, pulse_start) >= timeout_us {
+            return 0;
+        }
+        spin_loop();
+    }
+
+    elapsed_us(clock, pulse_start)
+}
+
+fn ultra<U>(
+    timer: &mut Timer<microbit::pac::TIMER0>,
+    clock: &Timer<microbit::pac::TIMER1, U>,
+    trig: &mut impl OutputPin,
+    echo: &mut impl InputPin,
+    last_time_us: &mut u32,
+) -> u32 {
+    let settle_start = clock.read();
+    while echo.is_high().ok().unwrap_or(false) {
+        if elapsed_us(clock, settle_start) >= ULTRA_MAX_PULSE_US {
+            break;
+        }
+        spin_loop();
+    }
+
+    let _ = trig.set_low();
+    timer.delay_us(2);
+    let _ = trig.set_high();
+    timer.delay_us(10);
+    let _ = trig.set_low();
+
+    let t = pulse_in_high(clock, echo, ULTRA_MAX_PULSE_US);
+    let mut ret = t;
+
+    if ret == 0 && *last_time_us != 0 {
+        ret = *last_time_us;
+    }
+    *last_time_us = t;
+
+    (ret + 29) / 58
+}
 
 enum Direction {
     Forward = 1,
@@ -155,6 +219,12 @@ fn main() -> ! {
     // TWI (“Two-Wire Interface”), TWIM (“Two-Wire Interface Master”) and TWIS (“Two-Wire Interface Slave”).
     let board = Board::take().unwrap();
     let mut timer = Timer::new(board.TIMER0);
+    let mut pulse_clock = Timer::periodic(board.TIMER1);
+    pulse_clock.start(u32::MAX);
+
+    let mut trig_pin = board.pins.p0_01.into_push_pull_output(Level::Low);
+    let mut echo_pin = board.pins.p0_13.into_floating_input();
+    let mut ultra_last_time_us = 0_u32;
 
     // MakeCode uses the external micro:bit I2C bus (P19/P20).
     let mut i2c = Twim::new(
@@ -178,5 +248,23 @@ fn main() -> ! {
     // motor_stop(&mut i2c);
     // timer.delay_ms(2000_u32);
 
-    loop {}
+    loop {
+        let distance_cm = ultra(
+            &mut timer,
+            &pulse_clock,
+            &mut trig_pin,
+            &mut echo_pin,
+            &mut ultra_last_time_us,
+        );
+
+        if distance_cm > 0 && distance_cm <= 10 {
+            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Red);
+            led_set_color(&mut i2c, LedRgb::Led2, LedColor::Red);
+        } else {
+            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Green);
+            led_set_color(&mut i2c, LedRgb::Led2, LedColor::Green);
+        }
+
+        timer.delay_ms(50);
+    }
 }

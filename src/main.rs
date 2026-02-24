@@ -1,8 +1,12 @@
 #![no_std]
 #![no_main]
 
+use core::hint::spin_loop;
+
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
+use embedded_hal::digital::InputPin;
+use embedded_hal::digital::OutputPin;
 use microbit::{
     board::Board,
     hal::{
@@ -10,7 +14,12 @@ use microbit::{
         twim::{self, Twim},
     },
 };
+use nrf52833_hal::gpio::{
+    Floating, Input, Output, PushPull,
+    p0::{P0_01, P0_13},
+};
 use panic_halt as _;
+use rtt_target::{rprintln, rtt_init_print};
 
 const I2C_ADDR: u8 = 0x30;
 
@@ -149,12 +158,50 @@ fn led_disable(i2c: &mut Twim<microbit::pac::TWIM0>) {
     write_reg(i2c, LeftLED::Blue as u8, 255);
     write_reg(i2c, LeftLED::Green as u8, 255);
 }
+
+fn ultra(
+    trigger: &mut P0_01<Output<PushPull>>,
+    echo: &mut P0_13<Input<Floating>>,
+    timer: &mut Timer<microbit::pac::TIMER0>,
+    clock: &mut Timer<microbit::pac::TIMER1>,
+) -> u32 {
+    trigger.set_low();
+    timer.delay_us(2);
+    trigger.set_high();
+    timer.delay_us(10);
+    trigger.set_low();
+    // spin_loop();
+    clock.start(u32::MAX); // because we dont have a event we want to trigger when the
+    // timer is reached, so we just set it to max value
+    let start = clock.read();
+    let mut now = clock.read();
+    let mut elapsed = now.wrapping_sub(start);
+
+    // echo is high true until the wave comes back
+    while echo.is_high().ok().unwrap_or(true) && elapsed < 100_000 {
+        // cancel after 100 ms
+        now = clock.read();
+        elapsed = now.wrapping_sub(start);
+    }
+    if elapsed > 100_000 {
+        rprintln!("ERROR");
+        return u32::MAX;
+    }
+    rprintln!("{:?}", elapsed);
+
+    return elapsed / 58;
+}
+
 #[entry]
 fn main() -> ! {
+    rtt_init_print!();
+
     // The TWIM instances share the same address space with instances of SPIM, SPIS, SPI, TWIS, and TWI. For example, TWIM0 conflicts with SPIM0, SPIS0, etc.; TWIM1 conflicts with SPIM1, SPIS1, etc. You need to make sure that conflicting instances are disabled before using Twim. Please refer to the product specification for more information (section 15.2 for nRF52832, section 6.1.2 for nRF52840).
     // TWI (“Two-Wire Interface”), TWIM (“Two-Wire Interface Master”) and TWIS (“Two-Wire Interface Slave”).
     let board = Board::take().unwrap();
     let mut timer = Timer::new(board.TIMER0);
+
+    let mut timer2 = Timer::new(board.TIMER1);
 
     // MakeCode uses the external micro:bit I2C bus (P19/P20).
     let mut i2c = Twim::new(
@@ -166,6 +213,22 @@ fn main() -> ! {
     // Safety: always stop first (prevents stale motor state).
     motor_stop(&mut i2c);
     led_disable(&mut i2c);
+
+    let mut trigger_pin = board
+        .pins
+        .p0_01
+        .into_push_pull_output(nrf52833_hal::gpio::Level::Low);
+    let mut echo_pin = board.pins.p0_13.into_floating_input();
+
+    loop {
+        let distance = ultra(&mut trigger_pin, &mut echo_pin, &mut timer, &mut timer2);
+        if distance > 10 && distance < 100 {
+            rprintln!("distance: {:?}", distance);
+            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Green);
+        } else {
+            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Red);
+        }
+    }
     // led_show(&mut i2c, LedRgb::Led1, LedColor::Green);
     // led_set_color(&mut i2c, LedRgb::Led2, (255 - 153, 255 - 153, 255));
     // timer.delay_ms(100_u32);
@@ -178,5 +241,5 @@ fn main() -> ! {
     // motor_stop(&mut i2c);
     // timer.delay_ms(2000_u32);
 
-    loop {}
+    // loop {}
 }

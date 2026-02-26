@@ -211,6 +211,16 @@ fn ultra(
     return pulse_us / 58;
 }
 
+fn linetracking() {
+    //  pins.setPull(DigitalPin.P12, PinPullMode.PullUp); -> P0.12
+    // pins.setPull(DigitalPin.P13, PinPullMode.PullUp); -> P0.17
+    // //% block="Line Tracking"
+    // //% group="Line Tracking" weight=68
+    // export function LineTracking(): number {
+    //     let val = pins.digitalReadPin(DigitalPin.P12) << 0 | pins.digitalReadPin(DigitalPin.P13) << 1;
+    //     return val;
+    // }
+}
 #[entry]
 fn main() -> ! {
     rtt_init_print!();

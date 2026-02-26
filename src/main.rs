@@ -22,6 +22,8 @@ use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
 
 const I2C_ADDR: u8 = 0x30;
+const TIMEOUT_US: u32 = 30_000;
+const MIN_VALID_PULSE_US: u32 = 120;
 
 enum Direction {
     Forward = 1,
@@ -33,6 +35,7 @@ enum Motor {
     B = 2,
 }
 
+#[derive(PartialEq)]
 enum LedColor {
     Red = 1,
     Green = 2,
@@ -100,7 +103,7 @@ fn motor(i2c: &mut Twim<microbit::pac::TWIM0>, speed: u8, motorlist: Motor, dire
 }
 
 // NOTE: 0 = ON, 255 = OFF
-fn color_to_pwm(c: LedColor) -> (u8, u8, u8) {
+fn color_to_pwm(c: &LedColor) -> (u8, u8, u8) {
     match c {
         LedColor::Red => (0, 255, 255),
         LedColor::Green => (255, 0, 255),
@@ -115,7 +118,7 @@ fn color_to_pwm(c: LedColor) -> (u8, u8, u8) {
     }
 }
 
-fn led_set_color(i2c: &mut Twim<microbit::pac::TWIM0>, led: LedRgb, led_color: LedColor) {
+fn led_set_color(i2c: &mut Twim<microbit::pac::TWIM0>, led: LedRgb, led_color: &LedColor) {
     let (r, g, b) = color_to_pwm(led_color);
 
     match led {
@@ -170,26 +173,42 @@ fn ultra(
     trigger.set_high();
     timer.delay_us(10);
     trigger.set_low();
-    // spin_loop();
-    clock.start(u32::MAX); // because we dont have a event we want to trigger when the
-    // timer is reached, so we just set it to max value
+    clock.start(u32::MAX); // because we dont have a event we want to trigger when the timer is reached, so we just set it to max value
+    let t_idle = clock.read();
+
+    // wait for low to reset
+    while echo.is_high().unwrap() {
+        if clock.read().wrapping_sub(t_idle) > TIMEOUT_US {
+            return u32::MAX;
+        }
+        spin_loop();
+    }
+
+    // wait for the start
+    let t_wait_rise = clock.read();
+    while echo.is_low().unwrap() {
+        if clock.read().wrapping_sub(t_wait_rise) > TIMEOUT_US {
+            return u32::MAX;
+        }
+        spin_loop();
+    }
     let start = clock.read();
-    let mut now = clock.read();
-    let mut elapsed = now.wrapping_sub(start);
 
-    // echo is high true until the wave comes back
-    while echo.is_high().ok().unwrap_or(true) && elapsed < 100_000 {
-        // cancel after 100 ms
-        now = clock.read();
-        elapsed = now.wrapping_sub(start);
+    // while high sound travels out and back => sets to low if sound is receveid
+    while echo.is_high().unwrap() {
+        if clock.read().wrapping_sub(start) > TIMEOUT_US {
+            return u32::MAX;
+        }
+        spin_loop();
     }
-    if elapsed > 100_000 {
-        rprintln!("ERROR");
-        return u32::MAX;
+    let end = clock.read();
+    // On nRF HAL timer this read is typically already in microsecond ticks.
+    let pulse_us = end.wrapping_sub(start);
+    if pulse_us < MIN_VALID_PULSE_US {
+        return u32::MAX; // noise
     }
-    rprintln!("{:?}", elapsed);
 
-    return elapsed / 58;
+    return pulse_us / 58;
 }
 
 #[entry]
@@ -220,14 +239,27 @@ fn main() -> ! {
         .into_push_pull_output(nrf52833_hal::gpio::Level::Low);
     let mut echo_pin = board.pins.p0_13.into_floating_input();
 
+    let mut current_led_color = LedColor::Red;
+    let mut new_led_color: LedColor;
+    led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
     loop {
         let distance = ultra(&mut trigger_pin, &mut echo_pin, &mut timer, &mut timer2);
-        if distance > 10 && distance < 100 {
-            rprintln!("distance: {:?}", distance);
-            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Green);
+        rprintln!("distance: {:?}cm", distance);
+
+        if distance != u32::MAX && distance < 15 {
+            rprintln!("distance: {:?}cm", distance);
+            new_led_color = LedColor::Green;
+            // led_set_color(&mut i2c, LedRgb::Led1, LedColor::Green);
         } else {
-            led_set_color(&mut i2c, LedRgb::Led1, LedColor::Red);
+            // rprintln!("distance: {:?}cm", distance);
+            // led_set_color(&mut i2c, LedRgb::Led1, LedColor::Red);
+            new_led_color = LedColor::Red;
         }
+        if new_led_color != current_led_color {
+            current_led_color = new_led_color;
+            led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
+        }
+        // timer.delay_ms(100);
     }
     // led_show(&mut i2c, LedRgb::Led1, LedColor::Green);
     // led_set_color(&mut i2c, LedRgb::Led2, (255 - 153, 255 - 153, 255));

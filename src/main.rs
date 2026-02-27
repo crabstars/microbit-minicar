@@ -14,6 +14,9 @@ use microbit::{
         twim::{self, Twim},
     },
 };
+use nrf52833_hal::gpio::PullUp;
+use nrf52833_hal::gpio::p0::P0_12;
+use nrf52833_hal::gpio::p0::P0_17;
 use nrf52833_hal::gpio::{
     Floating, Input, Output, PushPull,
     p0::{P0_01, P0_13},
@@ -28,6 +31,14 @@ const MIN_VALID_PULSE_US: u32 = 120;
 enum Direction {
     Forward = 1,
     Backward = 2,
+}
+
+enum LineTrackingSensor {
+    Both = 0,
+    Left = 1,
+    Right = 2,
+    None = 3,
+    Unknown = 4,
 }
 
 enum Motor {
@@ -211,15 +222,19 @@ fn ultra(
     return pulse_us / 58;
 }
 
-fn linetracking() {
-    //  pins.setPull(DigitalPin.P12, PinPullMode.PullUp); -> P0.12
-    // pins.setPull(DigitalPin.P13, PinPullMode.PullUp); -> P0.17
-    // //% block="Line Tracking"
-    // //% group="Line Tracking" weight=68
-    // export function LineTracking(): number {
-    //     let val = pins.digitalReadPin(DigitalPin.P12) << 0 | pins.digitalReadPin(DigitalPin.P13) << 1;
-    //     return val;
-    // }
+fn linetracking(
+    p12: &mut P0_12<Input<PullUp>>,
+    p17: &mut P0_17<Input<PullUp>>,
+) -> LineTrackingSensor {
+    let val = (p12.is_high().unwrap() as u8) | (p17.is_high().unwrap() as u8) << 1;
+    rprintln!("{:?}", val);
+    match val {
+        0 => LineTrackingSensor::Both,
+        1 => LineTrackingSensor::Left,
+        2 => LineTrackingSensor::Right,
+        3 => LineTrackingSensor::None,
+        _ => LineTrackingSensor::Unknown,
+    }
 }
 #[entry]
 fn main() -> ! {
@@ -243,34 +258,38 @@ fn main() -> ! {
     motor_stop(&mut i2c);
     led_disable(&mut i2c);
 
-    let mut trigger_pin = board
-        .pins
-        .p0_01
-        .into_push_pull_output(nrf52833_hal::gpio::Level::Low);
-    let mut echo_pin = board.pins.p0_13.into_floating_input();
-
-    let mut current_led_color = LedColor::Red;
-    let mut new_led_color: LedColor;
-    led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
+    let mut digital_pin_13 = board.pins.p0_17.into_pullup_input();
+    let mut digital_pin_12 = board.edge.e12.into_pullup_input();
     loop {
-        let distance = ultra(&mut trigger_pin, &mut echo_pin, &mut timer, &mut timer2);
-        rprintln!("distance: {:?}cm", distance);
-
-        if distance != u32::MAX && distance < 15 {
-            rprintln!("distance: {:?}cm", distance);
-            new_led_color = LedColor::Green;
-            // led_set_color(&mut i2c, LedRgb::Led1, LedColor::Green);
-        } else {
-            // rprintln!("distance: {:?}cm", distance);
-            // led_set_color(&mut i2c, LedRgb::Led1, LedColor::Red);
-            new_led_color = LedColor::Red;
-        }
-        if new_led_color != current_led_color {
-            current_led_color = new_led_color;
-            led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
-        }
-        // timer.delay_ms(100);
+        linetracking(&mut digital_pin_12, &mut digital_pin_13);
     }
+
+    // ---- ultra ----
+    // let mut trigger_pin = board
+    //     .pins
+    //     .p0_01
+    //     .into_push_pull_output(nrf52833_hal::gpio::Level::Low);
+    // let mut echo_pin = board.pins.p0_13.into_floating_input();
+    // let mut current_led_color = LedColor::Red;
+    // let mut new_led_color: LedColor;
+    // led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
+    // loop {
+    //     let distance = ultra(&mut trigger_pin, &mut echo_pin, &mut timer, &mut timer2);
+    //     rprintln!("distance: {:?}cm", distance);
+    //
+    //     if distance != u32::MAX && distance < 15 {
+    //         rprintln!("distance: {:?}cm", distance);
+    //         new_led_color = LedColor::Green;
+    //     } else {
+    //         new_led_color = LedColor::Red;
+    //     }
+    //     if new_led_color != current_led_color {
+    //         current_led_color = new_led_color;
+    //         led_set_color(&mut i2c, LedRgb::Led1, &current_led_color);
+    //     }
+    // }
+    // ---- ultra ----
+
     // led_show(&mut i2c, LedRgb::Led1, LedColor::Green);
     // led_set_color(&mut i2c, LedRgb::Led2, (255 - 153, 255 - 153, 255));
     // timer.delay_ms(100_u32);

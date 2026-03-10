@@ -4,4 +4,5 @@ pub mod bus;
 pub mod led;
 pub mod line_tracking;
 pub mod motor;
+pub mod servo;
 pub mod ultra;

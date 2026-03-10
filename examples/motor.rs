@@ -1,15 +1,15 @@
 #![no_std]
 #![no_main]
 
-use car_core::led::{self, LedColor, LedRgb};
-use car_core::motor;
+use car_core::led;
+use car_core::motor::{self, Direction, Motor};
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
 use microbit::{
     board::Board,
     hal::{
-        Timer,
         twim::{self, Twim},
+        Timer,
     },
 };
 use panic_halt as _;
@@ -27,25 +27,19 @@ fn main() -> ! {
         twim::Frequency::K100,
     );
 
-    motor::stop(&mut i2c);
     led::disable(&mut i2c);
-
-    let colors = [
-        LedColor::Red,
-        LedColor::Green,
-        LedColor::Blue,
-        LedColor::Yellow,
-        LedColor::Cyan,
-        LedColor::Purple,
-        LedColor::White,
-        LedColor::Black,
-    ];
+    motor::stop(&mut i2c);
 
     loop {
-        for color in colors {
-            led::set_color(&mut i2c, LedRgb::Led1, color);
-            led::set_color(&mut i2c, LedRgb::Led2, color);
-            timer.delay_ms(500);
-        }
+        motor::set(&mut i2c, 90, Motor::A, Direction::Forward);
+        motor::set(&mut i2c, 90, Motor::B, Direction::Forward);
+        timer.delay_ms(1_500);
+
+        motor::set(&mut i2c, 90, Motor::A, Direction::Backward);
+        motor::set(&mut i2c, 90, Motor::B, Direction::Backward);
+        timer.delay_ms(1_500);
+
+        motor::stop(&mut i2c);
+        timer.delay_ms(1_000);
     }
 }

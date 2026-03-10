@@ -2,9 +2,14 @@ This project is aligned with the MakeCode extension:
 
 - `https://github.com/keyestudio2019/MiniCar`
 
-Build one feature at a time:
+Build one example at a time:
 
-- `cargo build --bin led_color_set`
-- `cargo build --bin motor`
-- `cargo build --bin ultra`
-- `cargo build --bin line_tracking`
+- `cargo build --example led_color_set`
+- `cargo build --example motor`
+- `cargo build --example ultra`
+- `cargo build --example line_tracking`
+
+
+Run example:
+
+- `cargo embed --example ultra`

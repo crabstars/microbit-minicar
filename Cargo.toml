@@ -5,6 +5,7 @@ edition = "2024"
 description = "Reusable Rust drivers and examples for the Keyestudio MiniCar on BBC micro:bit v2"
 repository = "https://github.com/crabstars/microbit-minicar"
 readme = "README.md"
+license = "CC0-1.0"
 keywords = ["embedded", "microbit", "robot", "minicar", "no-std"]
 categories = ["embedded", "no-std"]
 

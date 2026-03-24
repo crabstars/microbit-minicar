@@ -16,7 +16,7 @@ It is based on the MakeCode MiniCar extension:
 - LCD1602 helper for I2C displays
 
 The reusable library lives in `src/lib.rs`.
-The board setup for the micro:bit stays in `examples/` and `src/main.rs`.
+The board setup for the micro:bit stays in `examples/`.
 
 ## Use it as a library
 
@@ -63,7 +63,7 @@ cargo build --example ultra
 cargo build --example lcd1602
 ```
 
-Build the default app:
+Build the library:
 
 ```bash
 cargo build

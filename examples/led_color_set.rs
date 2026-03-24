@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use car_core::led::{self, LedColor, LedRgb};
-use car_core::motor;
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
 use microbit::{
@@ -12,6 +10,8 @@ use microbit::{
         Timer,
     },
 };
+use microbit_minicar::led::{self, LedColor, LedRgb};
+use microbit_minicar::motor;
 use panic_halt as _;
 use rtt_target::rtt_init_print;
 
@@ -27,8 +27,8 @@ fn main() -> ! {
         twim::Frequency::K100,
     );
 
-    motor::stop(&mut i2c);
-    led::disable(&mut i2c);
+    let _ = motor::stop(&mut i2c);
+    let _ = led::disable(&mut i2c);
 
     let colors = [
         LedColor::Red,
@@ -43,8 +43,8 @@ fn main() -> ! {
 
     loop {
         for color in colors {
-            led::set_color(&mut i2c, LedRgb::Led1, color);
-            led::set_color(&mut i2c, LedRgb::Led2, color);
+            let _ = led::set_color(&mut i2c, LedRgb::Led1, color);
+            let _ = led::set_color(&mut i2c, LedRgb::Led2, color);
             timer.delay_ms(500);
         }
     }

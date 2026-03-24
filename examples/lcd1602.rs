@@ -1,18 +1,18 @@
 #![no_std]
 #![no_main]
 
-use car_core::{
-    lcd1602::{DEFAULT_ADDR, Lcd1602},
-    led, motor,
-};
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
 use microbit::{
     board::Board,
     hal::{
-        Timer,
         twim::{self, Twim},
+        Timer,
     },
+};
+use microbit_minicar::{
+    lcd1602::{Lcd1602, DEFAULT_ADDR},
+    led, motor,
 };
 use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
@@ -29,8 +29,8 @@ fn main() -> ! {
         twim::Frequency::K100,
     );
 
-    motor::stop(&mut i2c);
-    led::disable(&mut i2c);
+    let _ = motor::stop(&mut i2c);
+    let _ = led::disable(&mut i2c);
 
     let mut lcd = Lcd1602::new(DEFAULT_ADDR);
 

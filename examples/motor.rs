@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use car_core::led;
-use car_core::motor::{self, Direction, Motor};
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
 use microbit::{
@@ -12,6 +10,8 @@ use microbit::{
         Timer,
     },
 };
+use microbit_minicar::led;
+use microbit_minicar::motor::{self, Direction, Motor};
 use panic_halt as _;
 use rtt_target::rtt_init_print;
 
@@ -27,19 +27,19 @@ fn main() -> ! {
         twim::Frequency::K100,
     );
 
-    led::disable(&mut i2c);
-    motor::stop(&mut i2c);
+    let _ = led::disable(&mut i2c);
+    let _ = motor::stop(&mut i2c);
 
     loop {
-        motor::set(&mut i2c, 90, Motor::A, Direction::Forward);
-        motor::set(&mut i2c, 90, Motor::B, Direction::Forward);
+        let _ = motor::set(&mut i2c, 90, Motor::A, Direction::Forward);
+        let _ = motor::set(&mut i2c, 90, Motor::B, Direction::Forward);
         timer.delay_ms(1_500);
 
-        motor::set(&mut i2c, 90, Motor::A, Direction::Backward);
-        motor::set(&mut i2c, 90, Motor::B, Direction::Backward);
+        let _ = motor::set(&mut i2c, 90, Motor::A, Direction::Backward);
+        let _ = motor::set(&mut i2c, 90, Motor::B, Direction::Backward);
         timer.delay_ms(1_500);
 
-        motor::stop(&mut i2c);
+        let _ = motor::stop(&mut i2c);
         timer.delay_ms(1_000);
     }
 }

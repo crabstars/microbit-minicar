@@ -1,9 +1,10 @@
-use microbit::hal::twim::Twim;
+use embedded_hal::i2c::I2c;
 
 pub const I2C_ADDR: u8 = 0x30;
 
-pub type CarI2c = Twim<microbit::pac::TWIM0>;
-
-pub fn write_reg(i2c: &mut CarI2c, reg: u8, value: u8) {
-    let _ = i2c.write(I2C_ADDR, &[reg, value]);
+pub fn write_reg<I2C>(i2c: &mut I2C, reg: u8, value: u8) -> Result<(), I2C::Error>
+where
+    I2C: I2c,
+{
+    i2c.write(I2C_ADDR, &[reg, value])
 }

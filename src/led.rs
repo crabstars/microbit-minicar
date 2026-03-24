@@ -1,6 +1,8 @@
-use crate::bus::{CarI2c, write_reg};
+use embedded_hal::i2c::I2c;
 
-#[derive(PartialEq, Clone, Copy)]
+use crate::bus::write_reg;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LedColor {
     Red = 1,
     Green = 2,
@@ -12,7 +14,7 @@ pub enum LedColor {
     Black = 8,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LedRgb {
     Led1 = 1,
     Led2 = 2,
@@ -45,32 +47,44 @@ fn color_to_pwm(color: LedColor) -> (u8, u8, u8) {
     }
 }
 
-pub fn set_color(i2c: &mut CarI2c, led: LedRgb, color: LedColor) {
-    set_rgb(i2c, led, color_to_pwm(color));
+pub fn set_color<I2C>(i2c: &mut I2C, led: LedRgb, color: LedColor) -> Result<(), I2C::Error>
+where
+    I2C: I2c,
+{
+    set_rgb(i2c, led, color_to_pwm(color))
 }
 
-pub fn set_rgb(i2c: &mut CarI2c, led: LedRgb, rgb: (u8, u8, u8)) {
+pub fn set_rgb<I2C>(i2c: &mut I2C, led: LedRgb, rgb: (u8, u8, u8)) -> Result<(), I2C::Error>
+where
+    I2C: I2c,
+{
     let (r, g, b) = rgb;
 
     match led {
         LedRgb::Led1 => {
-            write_reg(i2c, RightLed::Red as u8, r);
-            write_reg(i2c, RightLed::Green as u8, g);
-            write_reg(i2c, RightLed::Blue as u8, b);
+            write_reg(i2c, RightLed::Red as u8, r)?;
+            write_reg(i2c, RightLed::Green as u8, g)?;
+            write_reg(i2c, RightLed::Blue as u8, b)?;
         }
         LedRgb::Led2 => {
-            write_reg(i2c, LeftLed::Red as u8, r);
-            write_reg(i2c, LeftLed::Green as u8, g);
-            write_reg(i2c, LeftLed::Blue as u8, b);
+            write_reg(i2c, LeftLed::Red as u8, r)?;
+            write_reg(i2c, LeftLed::Green as u8, g)?;
+            write_reg(i2c, LeftLed::Blue as u8, b)?;
         }
     }
+
+    Ok(())
 }
 
-pub fn disable(i2c: &mut CarI2c) {
-    write_reg(i2c, RightLed::Red as u8, 255);
-    write_reg(i2c, RightLed::Blue as u8, 255);
-    write_reg(i2c, RightLed::Green as u8, 255);
-    write_reg(i2c, LeftLed::Red as u8, 255);
-    write_reg(i2c, LeftLed::Blue as u8, 255);
-    write_reg(i2c, LeftLed::Green as u8, 255);
+pub fn disable<I2C>(i2c: &mut I2C) -> Result<(), I2C::Error>
+where
+    I2C: I2c,
+{
+    write_reg(i2c, RightLed::Red as u8, 255)?;
+    write_reg(i2c, RightLed::Blue as u8, 255)?;
+    write_reg(i2c, RightLed::Green as u8, 255)?;
+    write_reg(i2c, LeftLed::Red as u8, 255)?;
+    write_reg(i2c, LeftLed::Blue as u8, 255)?;
+    write_reg(i2c, LeftLed::Green as u8, 255)?;
+    Ok(())
 }

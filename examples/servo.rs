@@ -15,7 +15,7 @@ use nrf52833_hal::{
     time::Hertz,
 };
 use panic_halt as _;
-use rtt_target::rtt_init_print;
+use rtt_target::{rprintln, rtt_init_print};
 
 #[entry]
 fn main() -> ! {
@@ -40,7 +40,7 @@ fn main() -> ! {
         .degrade();
     let pwm = Pwm::new(board.PWM0);
     pwm.set_output_pin(Channel::C0, servo_pin);
-    pwm.set_period(Hertz(50)); // TODO: what is this doing
+    pwm.set_period(Hertz(50));
 
     let max = pwm.max_duty();
     const SWEEP_STEPS: u16 = 100;
@@ -53,14 +53,18 @@ fn main() -> ! {
     loop {
         for step in 1..=SWEEP_STEPS {
             let duty = (u32::from(max) * u32::from(step) / u32::from(SWEEP_STEPS)) as u16;
+            rprintln!("up {:?}", duty);
             pwm.set_duty_on(Channel::C0, duty);
             timer.delay_ms(STEP_DELAY_MS);
         }
 
         for step in (0..SWEEP_STEPS).rev() {
             let duty = (u32::from(max) * u32::from(step) / u32::from(SWEEP_STEPS)) as u16;
+            rprintln!("down {:?}", duty);
             pwm.set_duty_on(Channel::C0, duty);
             timer.delay_ms(STEP_DELAY_MS);
         }
+        break;
     }
+    loop {}
 }

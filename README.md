@@ -9,6 +9,10 @@ Build one example at a time:
 - `cargo build --example ultra`
 - `cargo build --example line_tracking`
 
+Documentation:
+
+- `docs/pwm.md`
+
 
 Run example:
 

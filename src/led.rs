@@ -1,4 +1,4 @@
-use crate::bus::{CarI2c, write_reg};
+use crate::bus::{write_reg, CarI2c};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum LedColor {

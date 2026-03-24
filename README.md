@@ -20,11 +20,11 @@ The board setup for the micro:bit stays in `examples/`.
 
 ## Use it as a library
 
-From GitHub:
+From crates.io:
 
 ```toml
 [dependencies]
-microbit-minicar = { git = "https://github.com/crabstars/microbit-minicar" }
+microbit-minicar = "0.1.0"
 ```
 
 In code:

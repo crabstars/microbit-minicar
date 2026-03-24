@@ -8,6 +8,16 @@ readme = "README.md"
 license = "CC0-1.0"
 keywords = ["embedded", "microbit", "robot", "minicar", "no-std"]
 categories = ["embedded", "no-std"]
+include = [
+    "/.cargo/config.toml",
+    "/Cargo.toml",
+    "/Embed.toml",
+    "/LICENSE",
+    "/README.md",
+    "/memory.x",
+    "/examples/*.rs",
+    "/src/**/*.rs",
+]
 
 [lib]
 name = "microbit_minicar"

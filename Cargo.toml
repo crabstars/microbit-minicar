@@ -1,6 +1,6 @@
 [package]
 name = "microbit-minicar"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Reusable Rust drivers and examples for the Keyestudio MiniCar on BBC micro:bit v2"
 repository = "https://github.com/crabstars/microbit-minicar"

@@ -1,8 +1,10 @@
 #![no_std]
 #![no_main]
 
-use car_core::led::{self, LedColor, LedRgb};
-use car_core::motor;
+use car_core::{
+    lcd1602::{DEFAULT_ADDR, Lcd1602},
+    led, motor,
+};
 use cortex_m_rt::entry;
 use embedded_hal::delay::DelayNs;
 use microbit::{
@@ -13,7 +15,7 @@ use microbit::{
     },
 };
 use panic_halt as _;
-use rtt_target::rtt_init_print;
+use rtt_target::{rprintln, rtt_init_print};
 
 #[entry]
 fn main() -> ! {
@@ -30,22 +32,17 @@ fn main() -> ! {
     motor::stop(&mut i2c);
     led::disable(&mut i2c);
 
-    let colors = [
-        LedColor::Red,
-        LedColor::Green,
-        LedColor::Blue,
-        LedColor::Yellow,
-        LedColor::Cyan,
-        LedColor::Purple,
-        LedColor::White,
-        LedColor::Black,
-    ];
+    let mut lcd = Lcd1602::new(DEFAULT_ADDR);
+
+    if lcd.init(&mut i2c, &mut timer).is_ok() {
+        let _ = lcd.write_line(&mut i2c, &mut timer, 0, "MiniCar LCD");
+        let _ = lcd.write_line(&mut i2c, &mut timer, 1, "Hello from Rust");
+        rprintln!("LCD initialized at 0x27");
+    } else {
+        rprintln!("LCD init failed, check wiring/address");
+    }
 
     loop {
-        for color in colors {
-            led::set_color(&mut i2c, LedRgb::Led1, color);
-            led::set_color(&mut i2c, LedRgb::Led2, color);
-            timer.delay_ms(500);
-        }
+        timer.delay_ms(1_000);
     }
 }

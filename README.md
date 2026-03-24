@@ -4,7 +4,8 @@ This project is aligned with the MakeCode extension:
 
 Build one feature at a time:
 
-- `cargo build --bin led_color_set`
-- `cargo build --bin motor`
-- `cargo build --bin ultra`
-- `cargo build --bin line_tracking`
+- `cargo build --example lcd1602`
+- `cargo build --example led_color_set`
+- `cargo build --example motor`
+- `cargo build --example ultra`
+- `cargo build --example line_tracking`

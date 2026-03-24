@@ -8,8 +8,8 @@ use embedded_hal::delay::DelayNs;
 use microbit::{
     board::Board,
     hal::{
-        Timer,
         twim::{self, Twim},
+        Timer,
     },
 };
 use panic_halt as _;

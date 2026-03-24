@@ -6,12 +6,12 @@ use embedded_hal::delay::DelayNs;
 use microbit::{
     board::Board,
     hal::{
-        twim::{self, Twim},
         Timer,
+        twim::{self, Twim},
     },
 };
 use microbit_minicar::{
-    lcd1602::{Lcd1602, DEFAULT_ADDR},
+    lcd1602::{DEFAULT_ADDR, Lcd1602},
     led, motor,
 };
 use panic_halt as _;

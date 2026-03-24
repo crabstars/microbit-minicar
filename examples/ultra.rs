@@ -5,8 +5,8 @@ use cortex_m_rt::entry;
 use microbit::{
     board::Board,
     hal::{
-        twim::{self, Twim},
         Timer,
+        twim::{self, Twim},
     },
 };
 use microbit_minicar::led::{self, LedColor, LedRgb};
